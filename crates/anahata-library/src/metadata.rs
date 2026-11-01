@@ -38,6 +38,9 @@ pub fn extract_metadata<P: AsRef<Path>>(path: P) -> LibraryResult<TrackMetadata>
     let sample_rate = properties.sample_rate();
     let channels = properties.channels();
 
+    // Detected container/codec family (e.g. "mpeg", "flac", "opus"), independent of the file extension.
+    let codec = Some(format!("{:?}", tagged_file.file_type()).to_lowercase());
+
     let format = path_ref
         .extension()
         .and_then(|s| s.to_str())
@@ -86,6 +89,12 @@ pub fn extract_metadata<P: AsRef<Path>>(path: P) -> LibraryResult<TrackMetadata>
         sample_rate,
         channels,
         format,
-        codec: None,
+        codec,
     })
+}
+
+/// Codecs the playback engine (Symphonia 0.5.x) has no decoder for. Files in these
+/// codecs are not indexed, so the library never lists tracks that cannot be played.
+pub fn is_unsupported_codec(meta: &TrackMetadata) -> bool {
+    matches!(meta.codec.as_deref(), Some("opus"))
 }
