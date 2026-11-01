@@ -3,6 +3,16 @@ use rand::thread_rng;
 
 use crate::types::{QueueItem, RepeatMode};
 
+/// What `Queue::remove_item` did, so the caller can react (for example when the playing track was removed).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct RemoveOutcome {
+    /// The id existed and was removed.
+    pub removed: bool,
+    /// The removed item was the current one. `current_item()` now points at the item
+    /// that followed it (if any); nothing has been started.
+    pub removed_current: bool,
+}
+
 pub struct Queue {
     items: Vec<QueueItem>,
     play_order: Vec<usize>,
@@ -48,6 +58,10 @@ impl Queue {
         self.current_index
             .and_then(|idx| self.play_order.get(idx))
             .and_then(|&item_idx| self.items.get(item_idx))
+    }
+
+    pub fn current_item_id(&self) -> Option<u64> {
+        self.current_item().map(|it| it.id)
     }
 
     pub fn current_queue_index(&self) -> Option<usize> {
@@ -145,6 +159,7 @@ impl Queue {
         self.current_item()
     }
 
+    /// Natural advance, used when a track finishes by itself. Repeat One replays the same track.
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<&QueueItem> {
         if self.items.is_empty() {
@@ -172,6 +187,38 @@ impl Queue {
         }
     }
 
+    /// Advance requested by the user (Next button). Unlike `next()`, Repeat One does not trap
+    /// the user on the same track: it behaves like Repeat All. At the end of the queue with
+    /// repeat off it returns `None` and leaves nothing current.
+    pub fn skip_next(&mut self) -> Option<&QueueItem> {
+        if self.items.is_empty() {
+            return None;
+        }
+        let cur = self.current_index.unwrap_or(0);
+        let last = self.play_order.len() - 1;
+        if cur < last {
+            self.current_index = Some(cur + 1);
+        } else if self.repeat == RepeatMode::Off {
+            self.current_index = None;
+            return None;
+        } else {
+            self.current_index = Some(0);
+        }
+        self.current_item()
+    }
+
+    /// Moves to the following item without wrapping or repeating. Returns `None` (and does
+    /// not move) at the end. Used to hop over unplayable tracks without looping forever.
+    pub fn step_forward(&mut self) -> Option<&QueueItem> {
+        let cur = self.current_index?;
+        if cur + 1 < self.play_order.len() {
+            self.current_index = Some(cur + 1);
+            self.current_item()
+        } else {
+            None
+        }
+    }
+
     pub fn previous(&mut self) -> Option<&QueueItem> {
         if self.items.is_empty() {
             return None;
@@ -193,14 +240,39 @@ impl Queue {
         self.revision += 1;
     }
 
-    pub fn remove_item(&mut self, queue_item_id: u64) {
+    /// Removes an item without disturbing what is playing: `current` follows the item's
+    /// identity, and the shuffle order of the remaining items is preserved.
+    pub fn remove_item(&mut self, queue_item_id: u64) -> RemoveOutcome {
         let Some(item_idx) = self.items.iter().position(|it| it.id == queue_item_id) else {
-            return;
+            return RemoveOutcome::default();
         };
+        let order_pos = self
+            .play_order
+            .iter()
+            .position(|&x| x == item_idx)
+            .expect("every item appears in play_order");
 
         self.items.remove(item_idx);
-        self.rebuild_order();
+        self.play_order.remove(order_pos);
+        for entry in &mut self.play_order {
+            if *entry > item_idx {
+                *entry -= 1;
+            }
+        }
+
+        let mut removed_current = false;
+        if let Some(cur) = self.current_index {
+            if order_pos < cur {
+                self.current_index = Some(cur - 1);
+            } else if order_pos == cur {
+                removed_current = true;
+                // The next item slid into this slot; if there is none, nothing is current.
+                self.current_index = if cur < self.play_order.len() { Some(cur) } else { None };
+            }
+        }
+
         self.revision += 1;
+        RemoveOutcome { removed: true, removed_current }
     }
 
     fn rebuild_order(&mut self) {
