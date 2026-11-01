@@ -1,6 +1,8 @@
 [workspace]
 members = [
     "crates/anahata-audio",
+    "crates/anahata-player",
+    "crates/anahata-library",
 ]
 resolver = "2"
 

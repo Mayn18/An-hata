@@ -1,0 +1,16 @@
+[package]
+name = "anahata-library"
+version = "0.1.0"
+edition = "2021"
+authors = ["Anāhata Developers"]
+description = "SQLite database, library scanner, and metadata indexer for Anāhata"
+
+[dependencies]
+rusqlite = { version = "0.31", features = ["bundled"] }
+lofty = "0.21"
+crc32fast = "1.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+log = "0.4"
+walkdir = "2.5"

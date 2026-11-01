@@ -165,6 +165,26 @@ impl Voice {
                             offset += written;
 
                             if offset < samples.len() {
+                                // Check for stop command or consumer drop to avoid deadlock
+                                if producer.is_abandoned() {
+                                    return;
+                                }
+                                if let Ok(cmd) = command_rx.try_recv() {
+                                    match cmd {
+                                        VoiceWorkerCommand::Stop => return,
+                                        VoiceWorkerCommand::Seek(time_secs) => {
+                                            // Exit writing loop early; process seek at outer loop
+                                            let base_frames = (time_secs * shared.sample_rate as f64).max(0.0) as u64;
+                                            shared.seek_base_frames.store(base_frames, Ordering::SeqCst);
+                                            shared.frames_played.store(0, Ordering::SeqCst);
+                                            let _ = source.seek(time_secs);
+                                            is_eof = false;
+                                            shared.eof.store(false, Ordering::SeqCst);
+                                            break;
+                                        }
+                                    }
+                                }
+
                                 // Wait briefly for consumer to drain
                                 thread::sleep(Duration::from_millis(5));
                             }
