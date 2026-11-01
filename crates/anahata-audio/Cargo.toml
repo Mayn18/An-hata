@@ -1,0 +1,16 @@
+[package]
+name = "anahata-audio"
+version = "0.1.0"
+edition = "2021"
+authors = ["Anāhata Audio Developers"]
+description = "High-performance audio engine for the Anāhata music player"
+
+[dependencies]
+cpal = "0.15"
+symphonia = { version = "0.5", features = ["all"] }
+rtrb = "0.3"
+thiserror = "1.0"
+log = "0.4"
+
+[dev-dependencies]
+env_logger = "0.11"
