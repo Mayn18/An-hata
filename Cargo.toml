@@ -3,6 +3,7 @@ members = [
     "crates/anahata-audio",
     "crates/anahata-player",
     "crates/anahata-library",
+    "src-tauri",
 ]
 resolver = "2"
 

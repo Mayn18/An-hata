@@ -52,6 +52,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "anahata"
+version = "0.1.0"
+dependencies = [
+ "anahata-audio",
+ "anahata-library",
+ "anahata-player",
+ "env_logger",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "anahata-audio"
 version = "0.1.0"
 dependencies = [
