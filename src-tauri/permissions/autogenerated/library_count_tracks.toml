@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-library-count-tracks"
+description = "Enables the library_count_tracks command without any pre-configured scope."
+commands.allow = ["library_count_tracks"]
+
+[[permission]]
+identifier = "deny-library-count-tracks"
+description = "Denies the library_count_tracks command without any pre-configured scope."
+commands.deny = ["library_count_tracks"]

@@ -119,7 +119,7 @@ fn all_tags_are_persisted_and_compilations_stay_together() {
     let albums = Queries::list_albums(&fx.db, 10, 0).unwrap();
     assert_eq!(albums.len(), 1);
     assert_eq!(albums[0].track_count, 2, "album track_count must be maintained");
-    assert_eq!(fx.sql::<i64>("SELECT total_duration_ms FROM albums") > 0, true);
+    assert!(fx.sql::<i64>("SELECT total_duration_ms FROM albums") > 0);
 }
 
 #[test]

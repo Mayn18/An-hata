@@ -15,6 +15,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
+use serde::Serialize;
 use rusqlite::{named_params, params, Connection, OptionalExtension, Transaction};
 use walkdir::WalkDir;
 
@@ -26,7 +27,7 @@ const BATCH_SIZE: usize = 200;
 const PURGE_AFTER_MS: i64 = 30 * 24 * 60 * 60 * 1000;
 const SUPPORTED_EXTENSIONS: [&str; 6] = ["mp3", "flac", "wav", "m4a", "ogg", "aiff"];
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Serialize)]
 pub struct ScanSummary {
     pub scan_id: i64,
     pub files_seen: usize,
@@ -45,14 +46,14 @@ pub struct ScanSummary {
     pub cancelled: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum ScanPhase {
     Walking,
     Indexing,
     Finishing,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ScanProgress {
     pub phase: ScanPhase,
     pub files_total: usize,
