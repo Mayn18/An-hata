@@ -1,0 +1,34 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions for the main window: events from the backend and the app's own commands. No file-system, shell or dialog access from the webview.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:event:default",
+    "allow-library-list-tracks",
+    "allow-library-count-tracks",
+    "allow-library-search-tracks",
+    "allow-library-list-albums",
+    "allow-library-list-folders",
+    "allow-library-add-folder",
+    "allow-library-scan-folder",
+    "allow-library-cancel-scan",
+    "allow-player-play-tracks",
+    "allow-player-play",
+    "allow-player-pause",
+    "allow-player-toggle",
+    "allow-player-stop",
+    "allow-player-next",
+    "allow-player-previous",
+    "allow-player-seek",
+    "allow-player-set-volume",
+    "allow-player-set-shuffle",
+    "allow-player-set-repeat",
+    "allow-player-play-item",
+    "allow-player-remove-queue-item",
+    "allow-player-clear-queue",
+    "allow-player-get-state"
+  ]
+}

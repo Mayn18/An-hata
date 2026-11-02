@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-library-add-folder"
+description = "Enables the library_add_folder command without any pre-configured scope."
+commands.allow = ["library_add_folder"]
+
+[[permission]]
+identifier = "deny-library-add-folder"
+description = "Denies the library_add_folder command without any pre-configured scope."
+commands.deny = ["library_add_folder"]

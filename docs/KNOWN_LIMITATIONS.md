@@ -57,3 +57,17 @@ Status: **Stage 3 draft** (2026-11-01). Updated as prototypes report. Nothing he
 - A2 A typical user library ≤ 100k tracks, mostly local SSD/HDD.
 - A3 ~1.5 s ring buffers are enough to avoid underruns on typical hardware (tune after P1).
 - A4 Jules runs on Linux in the cloud: it **cannot** test audio output, Android device behaviour, or macOS/Windows. Audio-quality, Android and OS-integration acceptance tests must be run by the owner (see roadmap in Stage 5).
+
+
+## Status after the due-diligence fixes
+
+Fixed: sample-rate conversion, end-of-track auto-advance, seek (fresh voice, no stale audio), per-sample volume/pause ramps, allocation-free audio callback (tested), decode-failure reporting, queue removal identity, incremental scanner with moved/missing/duplicate/unreadable states, Tauri wiring with no mocked data.
+
+Still open:
+- Gapless playback and crossfade (one voice slot; the mixer cannot join two tracks yet).
+- Opus is not decodable (Symphonia 0.5.5); Opus files are skipped by the scanner. M4A is not gapless.
+- Resampler is 4-point cubic interpolation (no anti-alias filter when downsampling). Adequate for 44.1/48 kHz; consider `rubato` for high-rate sources.
+- Playlists, saved queue and playback state, artwork, backups, Android build.
+- The audio output path (CPAL) and the Tauri window have only been compile-checked in CI-like conditions, not run on real hardware by the author of these fixes. Please try it on your machine.
+- `cpal` is 0.15 (Android uses Oboe), not 0.18/AAudio as the design assumed.
+- Library list is paged at 200 rows and not virtualised in the UI.

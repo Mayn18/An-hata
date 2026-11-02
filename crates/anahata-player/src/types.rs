@@ -46,6 +46,23 @@ pub struct PlayerState {
     pub error: Option<String>,
 }
 
+impl PlayerState {
+    /// State of a player that has nothing loaded.
+    pub fn idle() -> Self {
+        Self {
+            status: PlaybackStatus::Stopped,
+            queue_revision: 0,
+            current_queue_index: None,
+            current_item: None,
+            position: PlaybackPosition { position_ms: 0, duration_ms: None, playing: false },
+            volume: 1.0,
+            shuffle: false,
+            repeat: RepeatMode::Off,
+            error: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum PlayerCommand {
     Play,

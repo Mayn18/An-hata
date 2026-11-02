@@ -35,20 +35,32 @@ impl ReaderPool {
         F: FnOnce(&Connection) -> LibraryResult<T>,
     {
         let (lock, cvar) = &*self.pool;
-        let mut conns = lock.lock().unwrap();
+        let mut conns = lock.lock().unwrap_or_else(|e| e.into_inner());
         while conns.is_empty() {
-            conns = cvar.wait(conns).unwrap();
+            conns = cvar.wait(conns).unwrap_or_else(|e| e.into_inner());
         }
-        let conn = conns.pop().unwrap();
+        let conn = conns.pop().expect("pool is non-empty");
         drop(conns);
 
-        let result = f(&conn);
+        // The guard puts the connection back even if `f` panics, so a panicking query can
+        // never shrink the pool (four lost connections used to deadlock every reader).
+        let guard = PoolGuard { pool: &self.pool, conn: Some(conn) };
+        f(guard.conn.as_ref().expect("guard holds a connection"))
+    }
+}
 
-        let mut conns = lock.lock().unwrap();
-        conns.push(conn);
-        cvar.notify_one();
+struct PoolGuard<'a> {
+    pool: &'a (Mutex<Vec<Connection>>, Condvar),
+    conn: Option<Connection>,
+}
 
-        result
+impl Drop for PoolGuard<'_> {
+    fn drop(&mut self) {
+        if let Some(conn) = self.conn.take() {
+            let (lock, cvar) = self.pool;
+            lock.lock().unwrap_or_else(|e| e.into_inner()).push(conn);
+            cvar.notify_one();
+        }
     }
 }
 

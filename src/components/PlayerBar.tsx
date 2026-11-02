@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Play,
   Pause,
@@ -11,11 +11,11 @@ import {
   VolumeX,
   Disc,
 } from 'lucide-react';
-import { usePlayerStore } from '../stores/playerStore';
+import { interpolatedPositionMs, usePlayerStore } from '../stores/playerStore';
 
 export const PlayerBar: React.FC = () => {
   const {
-    current_track,
+    current_item,
     status,
     position,
     volume,
@@ -31,8 +31,17 @@ export const PlayerBar: React.FC = () => {
   } = usePlayerStore();
 
   const isPlaying = status === 'Playing';
-  const duration = position.duration_ms || current_track?.duration_ms || 1;
-  const progressPercent = Math.min(100, (position.position_ms / duration) * 100);
+  const duration = position.duration_ms || 1;
+
+  // The backend reports position about once a second; interpolate for a smooth scrubber.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (!isPlaying) return;
+    const timer = setInterval(() => forceTick((n) => n + 1), 250);
+    return () => clearInterval(timer);
+  }, [isPlaying]);
+  const positionMs = interpolatedPositionMs(usePlayerStore.getState());
+  const progressPercent = Math.min(100, (positionMs / duration) * 100);
 
   const formatTime = (ms: number) => {
     const totalSecs = Math.floor(ms / 1000);
@@ -56,10 +65,10 @@ export const PlayerBar: React.FC = () => {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-100 truncate">
-            {current_track ? current_track.title : 'No track playing'}
+            {current_item ? current_item.title : 'No track playing'}
           </p>
           <p className="text-xs text-secondary truncate mt-0.5">
-            {current_track ? `${current_track.artist} — ${current_track.album}` : 'Select a track to start playback'}
+            {current_item ? current_item.artist : 'Select a track to start playback'}
           </p>
         </div>
       </div>
@@ -115,7 +124,7 @@ export const PlayerBar: React.FC = () => {
         {/* Scrubber */}
         <div className="w-full flex items-center gap-3">
           <span className="text-[11px] font-mono text-secondary w-10 text-right">
-            {formatTime(position.position_ms)}
+            {formatTime(positionMs)}
           </span>
           <div className="relative flex-1 flex items-center">
             <input
@@ -129,7 +138,7 @@ export const PlayerBar: React.FC = () => {
             />
           </div>
           <span className="text-[11px] font-mono text-secondary w-10">
-            {formatTime(duration)}
+            {formatTime(position.duration_ms ?? 0)}
           </span>
         </div>
       </div>

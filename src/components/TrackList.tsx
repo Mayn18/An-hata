@@ -4,7 +4,8 @@ import { usePlayerStore } from '../stores/playerStore';
 import { Track } from '../types';
 
 export const TrackList: React.FC = () => {
-  const { tracks, current_track, status, playTrack, togglePlay } = usePlayerStore();
+  const { tracks, totalTracks, current_item, status, playTrack, togglePlay, isLoading, searchQuery, folders } =
+    usePlayerStore();
 
   const formatDuration = (ms: number) => {
     const totalSecs = Math.floor(ms / 1000);
@@ -18,10 +19,21 @@ export const TrackList: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-100">Songs</h2>
-          <p className="text-sm text-secondary mt-1">{tracks.length} tracks available in local library</p>
+          <p className="text-sm text-secondary mt-1">{searchQuery.trim() ? `${tracks.length} results` : `${totalTracks} tracks in your library${totalTracks > tracks.length ? ` (showing first ${tracks.length})` : ''}`}</p>
         </div>
       </div>
 
+      {tracks.length === 0 && !isLoading && (
+        <div className="border border-dashed border-border rounded-xl p-10 text-center text-secondary text-sm">
+          {searchQuery.trim()
+            ? 'No songs match your search.'
+            : folders.length === 0
+              ? 'Your library is empty. Use “Add Folder” to choose where your music lives.'
+              : 'No playable songs found in your folders yet.'}
+        </div>
+      )}
+
+      {tracks.length > 0 && (
       <div className="border border-border/60 rounded-xl overflow-hidden bg-surface/40">
         <table className="w-full text-left text-sm">
           <thead className="bg-surface border-b border-border text-secondary text-xs uppercase tracking-wider">
@@ -37,7 +49,7 @@ export const TrackList: React.FC = () => {
           </thead>
           <tbody className="divide-y divide-border/30">
             {tracks.map((track: Track, index: number) => {
-              const isCurrent = current_track?.id === track.id;
+              const isCurrent = current_item?.track_id === track.id;
               const isPlaying = isCurrent && status === 'Playing';
 
               return (
@@ -86,6 +98,7 @@ export const TrackList: React.FC = () => {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 };

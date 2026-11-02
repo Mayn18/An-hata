@@ -1,75 +1,61 @@
-import { Track } from '../types';
+import { invoke } from '@tauri-apps/api/core';
+import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import type {
+  Album,
+  Folder,
+  PlaybackPosition,
+  PlayerState,
+  RepeatMode,
+  ScanProgress,
+  ScanSummary,
+  Track,
+} from '../types';
 
-const INITIAL_MOCK_TRACKS: Track[] = [
-  {
-    id: 1,
-    title: "Symphony No. 5 in C Minor, Op. 67",
-    artist: "Ludwig van Beethoven",
-    album: "Masterpieces of Classical Music",
-    duration_ms: 452000,
-    rel_path: "beethoven_sym5.flac",
-    folder_location: "/music/classical",
-  },
-  {
-    id: 2,
-    title: "Clair de Lune",
-    artist: "Claude Debussy",
-    album: "Suite bergamasque",
-    duration_ms: 312000,
-    rel_path: "debussy_clair_de_lune.flac",
-    folder_location: "/music/classical",
-  },
-  {
-    id: 3,
-    title: "Solaris (Ambient Drift)",
-    artist: "Anāhata Soundscapes",
-    album: "Resonance Vol. 1",
-    duration_ms: 284000,
-    rel_path: "solaris.mp3",
-    folder_location: "/music/ambient",
-  },
-  {
-    id: 4,
-    title: "Echoes of the High Peaks",
-    artist: "Himalayan Drone",
-    album: "Mountain Meditation",
-    duration_ms: 540000,
-    rel_path: "echoes.flac",
-    folder_location: "/music/meditation",
-  },
-  {
-    id: 5,
-    title: "Kind of Blue (So What)",
-    artist: "Miles Davis",
-    album: "Kind of Blue",
-    duration_ms: 562000,
-    rel_path: "miles_davis_so_what.wav",
-    folder_location: "/music/jazz",
-  }
-];
+/** True when running inside the Tauri webview (false in a plain browser, e.g. `vite dev`). */
+export const isTauri = (): boolean =>
+  typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 export const api = {
-  async listTracks(limit = 50, offset = 0): Promise<Track[]> {
-    // In Tauri desktop/mobile runtime, this calls window.__TAURI__.invoke('library_list_tracks')
-    return INITIAL_MOCK_TRACKS.slice(offset, offset + limit);
-  },
+  // Library
+  listTracks: (limit = 200, offset = 0) => invoke<Track[]>('library_list_tracks', { limit, offset }),
+  countTracks: () => invoke<number>('library_count_tracks'),
+  searchTracks: (query: string, limit = 200) => invoke<Track[]>('library_search_tracks', { query, limit }),
+  listAlbums: (limit = 200, offset = 0) => invoke<Album[]>('library_list_albums', { limit, offset }),
+  listFolders: () => invoke<Folder[]>('library_list_folders'),
+  /** Opens the native folder picker; resolves to null if the user cancels. */
+  addFolder: () => invoke<Folder | null>('library_add_folder'),
+  scanFolder: (folderId: number) => invoke<ScanSummary>('library_scan_folder', { folderId }),
+  cancelScan: () => invoke<boolean>('library_cancel_scan'),
 
-  async searchTracks(query: string): Promise<Track[]> {
-    const q = query.toLowerCase().trim();
-    if (!q) return INITIAL_MOCK_TRACKS;
-    return INITIAL_MOCK_TRACKS.filter(
-      (t) =>
-        t.title.toLowerCase().includes(q) ||
-        t.artist.toLowerCase().includes(q) ||
-        t.album.toLowerCase().includes(q)
-    );
-  },
-
-  async scanDirectory(_path: string): Promise<{ files_seen: number; added: number }> {
-    return { files_seen: 42, added: 5 };
-  },
-
-  async togglePlayback(): Promise<void> {},
-  async seek(_posMs: number): Promise<void> {},
-  async setVolume(_volume: number): Promise<void> {},
+  // Player (tracks are always referred to by library id, never by path)
+  playTracks: (trackIds: number[], startTrackId: number | null) =>
+    invoke<void>('player_play_tracks', { trackIds, startTrackId }),
+  toggle: () => invoke<void>('player_toggle'),
+  next: () => invoke<void>('player_next'),
+  previous: () => invoke<void>('player_previous'),
+  seek: (positionMs: number) => invoke<void>('player_seek', { positionMs }),
+  setVolume: (volume: number) => invoke<void>('player_set_volume', { volume }),
+  setShuffle: (enabled: boolean) => invoke<void>('player_set_shuffle', { enabled }),
+  setRepeat: (mode: RepeatMode) => invoke<void>('player_set_repeat', { mode }),
+  getPlayerState: () => invoke<PlayerState>('player_get_state'),
 };
+
+export interface BackendListeners {
+  onState: (s: PlayerState) => void;
+  onPosition: (p: PlaybackPosition) => void;
+  onError: (message: string) => void;
+  onScanProgress: (p: ScanProgress) => void;
+  onScanFinished: (s: ScanSummary) => void;
+}
+
+/** Subscribes to backend events. Returns a function that removes every subscription. */
+export async function subscribe(l: BackendListeners): Promise<() => void> {
+  const offs: UnlistenFn[] = await Promise.all([
+    listen<PlayerState>('player://state', (e) => l.onState(e.payload)),
+    listen<PlaybackPosition>('player://position', (e) => l.onPosition(e.payload)),
+    listen<string>('player://error', (e) => l.onError(e.payload)),
+    listen<ScanProgress>('library://scan-progress', (e) => l.onScanProgress(e.payload)),
+    listen<ScanSummary>('library://scan-finished', (e) => l.onScanFinished(e.payload)),
+  ]);
+  return () => offs.forEach((off) => off());
+}

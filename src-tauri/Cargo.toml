@@ -3,12 +3,21 @@ name = "anahata"
 version = "0.1.0"
 edition = "2021"
 authors = ["Anāhata Developers"]
-description = "Desktop and Android frontend shell for Anāhata"
+description = "Desktop and Android app shell for Anāhata"
+
+[lib]
+name = "anahata_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
 anahata-audio = { path = "../crates/anahata-audio" }
 anahata-player = { path = "../crates/anahata-player" }
 anahata-library = { path = "../crates/anahata-library" }
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 log = "0.4"

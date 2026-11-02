@@ -4,7 +4,7 @@ use std::path::Path;
 
 use anahata_library::{Database, Queries, Scanner};
 
-fn create_dummy_wav<P: AsRef<Path>>(path: P) {
+fn create_dummy_wav<P: AsRef<Path>>(path: P, fill: u8) {
     let mut file = File::create(path).unwrap();
     let num_samples: usize = 4410;
     let sample_rate: u32 = 44100;
@@ -28,7 +28,8 @@ fn create_dummy_wav<P: AsRef<Path>>(path: P) {
     file.write_all(b"data").unwrap();
     file.write_all(&subchunk2_size.to_le_bytes()).unwrap();
 
-    let silence = vec![0u8; subchunk2_size as usize];
+    // Different fill per file: identical files would (correctly) be treated as duplicates.
+    let silence = vec![fill; subchunk2_size as usize];
     file.write_all(&silence).unwrap();
 }
 
@@ -43,8 +44,8 @@ fn test_database_migrations_and_scanner() {
 
     let track1 = music_dir.join("song1.wav");
     let track2 = music_dir.join("song2.wav");
-    create_dummy_wav(&track1);
-    create_dummy_wav(&track2);
+    create_dummy_wav(&track1, 0);
+    create_dummy_wav(&track2, 1);
 
     let db = Database::open(&db_path).expect("Failed to open DB");
 
